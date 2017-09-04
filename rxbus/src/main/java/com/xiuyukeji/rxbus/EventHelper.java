@@ -82,7 +82,7 @@ class EventHelper {
             subject = PublishSubject.create().toSerialized();
             bus.put(tag, subject);
         }
-        return subject.doOnDispose(new Action() {
+        return subject.doFinally(new Action() {
             @Override
             public void run() throws Exception {
                 recycleHelper.recycle(tag);

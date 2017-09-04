@@ -67,6 +67,14 @@ class EventStickyHelper {
 
         Observable.just(stickyInfo.event)
                 .compose(applySchedulers(info.mode))
+                .doFinally(new Action() {
+                    @Override
+                    public void run() throws Exception {
+                        if (stickyInfo.isSingle) {
+                            removeStickyEvent(info.eventType, info.tag);
+                        }
+                    }
+                })
                 .subscribe(new Consumer<Object>() {
                     @Override
                     public void accept(Object value) throws Exception {
@@ -75,17 +83,7 @@ class EventStickyHelper {
                 }, new Consumer<Throwable>() {
                     @Override
                     public void accept(Throwable throwable) throws Exception {
-                        if (stickyInfo.isSingle) {
-                            removeStickyEvent(info.eventType, info.tag);
-                        }
                         throwable.printStackTrace();
-                    }
-                }, new Action() {
-                    @Override
-                    public void run() throws Exception {
-                        if (stickyInfo.isSingle) {
-                            removeStickyEvent(info.eventType, info.tag);
-                        }
                     }
                 });
     }
