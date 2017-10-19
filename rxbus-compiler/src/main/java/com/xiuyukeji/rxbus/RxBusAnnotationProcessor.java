@@ -53,6 +53,9 @@ public class RxBusAnnotationProcessor extends AbstractProcessor {
         String putIndexName = "putIndex";
 
         ClassName threadModeName = ClassName.get(path, "ThreadMode");
+        ClassName onCallListenerName = ClassName.get(OnCallListener.class);
+        ClassName overrideName = ClassName.get(Override.class);
+        ClassName objectName = ClassName.get(Object.class);
 
         ParameterizedTypeName classType = ParameterizedTypeName.get(ClassName.get(Class.class),
                 WildcardTypeName.subtypeOf(Object.class));
@@ -193,16 +196,17 @@ public class RxBusAnnotationProcessor extends AbstractProcessor {
             readIndexMethodBuilder.addCode("$>");
             for (int j = 0; j < count; j++) {
                 ProcessorInfo info = index.processorInfos.get(j);
-                readIndexMethodBuilder.addCode("new $T($L, $L, $T.$L, $T.class, new OnCallListener() {\n",
+                readIndexMethodBuilder.addCode("new $T($L, $L, $T.$L, $T.class, new $T() {\n",
                         subscriberMethodInfoType,
                         info.tag,
                         info.sticky,
                         threadModeName,
                         info.mode,
-                        info.parameterTypeName);
-                readIndexMethodBuilder.addCode("$>@$T\n", ClassName.get(Override.class));
+                        info.parameterTypeName,
+                        onCallListenerName);
+                readIndexMethodBuilder.addCode("$>@$T\n", overrideName);
                 readIndexMethodBuilder.addCode("public void onCall($T subscriber, $T value) {\n",
-                        ClassName.get(Object.class), ClassName.get(Object.class));
+                        objectName, objectName);
                 readIndexMethodBuilder.addStatement("$>(($T) subscriber).$L((($T) value))",
                         index.classTypeName, info.methodName, info.parameterTypeName);
                 readIndexMethodBuilder.addCode("$<}\n");
