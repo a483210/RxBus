@@ -10,7 +10,6 @@ import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.WildcardTypeName;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -144,17 +143,19 @@ public class RxBusAnnotationProcessor extends AbstractProcessor {
 
             ClassName classTypeName = ClassName.get((TypeElement) parentElement);
             if (infoIndex == null || classTypeName.compareTo(infoIndex.classTypeName) != 0) {
-                infoIndex = map.get(classTypeName);
-                if (infoIndex == null) {
-                    infoIndex = new ProcessorInfoIndex(classTypeName);
-                    map.put(classTypeName, infoIndex);
-                }
+                infoIndex = map.computeIfAbsent(classTypeName, ProcessorInfoIndex::new);
             }
             Subscribe subscribe = element.getAnnotation(Subscribe.class);
 
             VariableElement parameterElement = variableElements.get(0);
-            Element parameterClassElement = typeUtils.asElement(parameterElement.asType());
+            TypeMirror parameterType = parameterElement.asType();
 
+            if (parameterType.getKind().isPrimitive()) {
+                logError(element, "subscriber method parameter class must not be primitive.");
+                return false;
+            }
+
+            Element parameterClassElement = typeUtils.asElement(parameterType);
             String parameterName = parameterClassElement.toString();
 
             ClassName parameterTypeClassName;
@@ -191,7 +192,7 @@ public class RxBusAnnotationProcessor extends AbstractProcessor {
                     index.classTypeName,
                     subscriberMethodInfoType);
 
-            Collections.sort(index.processorInfos, new TagComparator());
+            index.processorInfos.sort(new TagComparator());
             int count = index.processorInfos.size();
             readIndexMethodBuilder.addCode("$>");
             for (int j = 0; j < count; j++) {
@@ -239,7 +240,7 @@ public class RxBusAnnotationProcessor extends AbstractProcessor {
     }
 
     private void logError(Element element, String str) {
-        log(Diagnostic.Kind.NOTE, element, str);
+        log(Diagnostic.Kind.ERROR, element, str);
     }
 
     private void logNote(String str) {
@@ -253,7 +254,7 @@ public class RxBusAnnotationProcessor extends AbstractProcessor {
     @Override
     public Set<String> getSupportedAnnotationTypes() {
         Set<String> supportedTypes = new LinkedHashSet<>();
-        supportedTypes.add(Subscribe.class.getCanonicalName());
+        supportedTypes.add(com.xiuyukeji.rxbus.Subscribe.class.getCanonicalName());
         return supportedTypes;
     }
 

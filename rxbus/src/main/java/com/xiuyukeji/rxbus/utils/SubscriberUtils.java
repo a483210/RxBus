@@ -32,15 +32,8 @@ public class SubscriberUtils {
      * @param tag       标识
      * @return key
      */
-    public static String getEventKey(Class<?> eventType, int tag) {
+    public static String obtainEventKey(Class<?> eventType, int tag) {
         return String.format(Locale.getDefault(), "%s_%d", eventType.getName(), tag);
-    }
-
-    /**
-     * 生成序列
-     */
-    public static long getSequence() {
-        return System.currentTimeMillis();
     }
 
     /**
@@ -76,7 +69,6 @@ public class SubscriberUtils {
         try {
             return Class.forName(name).newInstance();
         } catch (Exception e) {
-            e.printStackTrace();
             return null;
         }
     }

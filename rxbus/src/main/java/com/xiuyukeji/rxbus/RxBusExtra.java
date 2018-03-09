@@ -2,14 +2,13 @@ package com.xiuyukeji.rxbus;
 
 import android.support.annotation.NonNull;
 
-import com.xiuyukeji.rxbus.lifecycle.LongRxLifecycleHelper;
+import com.xiuyukeji.rxbus.lifecycle.IntRxLifecycleHelper;
 
 import io.reactivex.Observable;
 import io.reactivex.functions.Consumer;
 import io.reactivex.internal.functions.Functions;
 
 import static com.xiuyukeji.rxbus.utils.SubscriberUtils.applySchedulers;
-import static com.xiuyukeji.rxbus.utils.SubscriberUtils.getSequence;
 
 /**
  * RxBus额外的拓展
@@ -32,12 +31,13 @@ public class RxBusExtra {
         return instance;
     }
 
-    private final RxBus rxBus;
-    private final LongRxLifecycleHelper lifecycleHelper;
+    private int sequence;
+    private final IntRxLifecycleHelper lifecycleHelper;
+    private final IntRxLifecycleHelper tagLifecycleHelper;
 
     private RxBusExtra() {
-        this.rxBus = RxBus.get();
-        this.lifecycleHelper = new LongRxLifecycleHelper();
+        this.lifecycleHelper = new IntRxLifecycleHelper();
+        this.tagLifecycleHelper = new IntRxLifecycleHelper();
     }
 
     public <T> Observable<T> take(@NonNull Class<T> eventType) {
@@ -57,8 +57,7 @@ public class RxBusExtra {
      * @return observable
      */
     public <T> Observable<T> take(@NonNull Class<T> eventType, int tag, @NonNull ThreadMode mode) {
-        return rxBus.eventHelper
-                .obtainSubject(tag)
+        return obtainSubject(tag)
                 .compose(applySchedulers(mode))
                 .ofType(eventType);
     }
@@ -74,16 +73,15 @@ public class RxBusExtra {
     }
 
     /**
-     * 只会执行一次的事件，会自动解除订阅
+     * 只会执行一次的事件，在被执行后会自动解除订阅
      *
      * @param eventType 类型
      * @param tag       标识
      * @param mode      线程模式
      */
     public <T> Observable<T> single(final @NonNull Class<T> eventType, int tag, @NonNull ThreadMode mode) {
-        final long sequence = getSequence();
-        return rxBus.eventHelper
-                .obtainSubject(tag)
+        final int sequence = getSequence();
+        return obtainSubject(tag)
                 .compose(applySchedulers(mode))
                 .filter(Functions.isInstanceOf(eventType))
                 .compose(lifecycleHelper.bindUntilEvent(sequence))
@@ -94,5 +92,25 @@ public class RxBusExtra {
                         lifecycleHelper.unbindEvent(sequence);
                     }
                 });
+    }
+
+    /**
+     * 解除tag所有的订阅
+     *
+     * @param tag 标识
+     */
+    public void unsubscriber(int tag) {
+        tagLifecycleHelper.unbindEvent(tag);
+    }
+
+    private Observable<Object> obtainSubject(int tag) {
+        return RxBus.get()
+                .eventHelper
+                .obtainSubject(tag)
+                .compose(tagLifecycleHelper.bindUntilEvent(tag));
+    }
+
+    private int getSequence() {
+        return sequence++;
     }
 }

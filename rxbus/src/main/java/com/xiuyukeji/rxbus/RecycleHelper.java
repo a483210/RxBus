@@ -14,7 +14,7 @@ import io.reactivex.subjects.Subject;
  * @author Created by jz on 2017/2/9 13:09
  */
 class RecycleHelper {
-    static final int RECYCLE_SPACE_TIME = 5 * 1000;
+    private static final int RECYCLE_SPACE_TIME = 5 * 1000;
 
     private final ConcurrentSkipListSet<Integer> cache;
 

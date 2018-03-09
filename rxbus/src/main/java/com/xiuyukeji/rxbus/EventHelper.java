@@ -19,7 +19,7 @@ import static com.xiuyukeji.rxbus.utils.SubscriberUtils.applySchedulers;
  * @author Created by jz on 2016/12/27 14:24
  */
 class EventHelper {
-    //根据Tag存储Subject，在post时会查找符合的Subject发布事件
+    //根据tag存储Subject，在post时会查找符合的subject发布事件
     //从这个角度上来讲，同一个subject订阅越多则发布事件越慢，反之如果tag越多则订阅事件速度越慢
     private final ConcurrentHashMap<Integer, Subject<Object>> bus;
     //管理subject取消订阅
@@ -55,8 +55,8 @@ class EventHelper {
     void subscribe(final Object subscriber, final SubscriberMethodInfo info) {
         obtainSubject(info.tag)
                 .compose(applySchedulers(info.mode))
-                .filter(Functions.isInstanceOf(info.eventType))
                 .compose(lifecycleHelper.bindUntilEvent(subscriber))
+                .filter(Functions.isInstanceOf(info.eventType))
                 .subscribe(new Consumer<Object>() {
                     @Override
                     public void accept(Object value) throws Exception {

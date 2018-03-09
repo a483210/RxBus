@@ -5,7 +5,6 @@ package com.xiuyukeji.rxbus;
  *
  * @author Created by jz on 2016/12/7 14:19
  */
-
 class SubscriberMethodInfo {
     final int tag;
     final boolean sticky;

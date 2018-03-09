@@ -3,11 +3,10 @@ package com.xiuyukeji.rxbus;
 import java.util.concurrent.ConcurrentHashMap;
 
 import io.reactivex.Observable;
-import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
 
 import static com.xiuyukeji.rxbus.utils.SubscriberUtils.applySchedulers;
-import static com.xiuyukeji.rxbus.utils.SubscriberUtils.getEventKey;
+import static com.xiuyukeji.rxbus.utils.SubscriberUtils.obtainEventKey;
 
 /**
  * sticky事件帮助类
@@ -15,7 +14,7 @@ import static com.xiuyukeji.rxbus.utils.SubscriberUtils.getEventKey;
  * @author Created by jz on 2016/12/27 14:24
  */
 class EventStickyHelper {
-    private final ConcurrentHashMap<String, StickyEventInfo> stickyEvents;
+    private final ConcurrentHashMap<String, Object> stickyEvents;
 
     EventStickyHelper() {
         this.stickyEvents = new ConcurrentHashMap<>();
@@ -23,31 +22,25 @@ class EventStickyHelper {
 
     //发布sticky事件
     void postSticky(Object event, int tag) {
-        String key = getEventKey(event.getClass(), tag);
-        stickyEvents.put(key, new StickyEventInfo(event));
-    }
-
-    //发布只会被消费一次的sticky事件
-    void postStickySingle(Object event, int tag) {
-        String key = getEventKey(event.getClass(), tag);
-        stickyEvents.put(key, new StickyEventInfo(true, event));
+        String key = obtainEventKey(event.getClass(), tag);
+        stickyEvents.put(key, event);
     }
 
     <T> T getStickyEvent(Class<T> eventType, int tag) {
-        String key = getEventKey(eventType, tag);
-        StickyEventInfo info = stickyEvents.get(key);
-        if (info != null) {
-            return eventType.cast(info.event);
+        String key = obtainEventKey(eventType, tag);
+        Object event = stickyEvents.get(key);
+        if (event != null) {
+            return eventType.cast(event);
         }
         return null;
     }
 
     //删除sticky事件
     <T> T removeStickyEvent(Class<T> eventType, int tag) {
-        String key = getEventKey(eventType, tag);
-        StickyEventInfo info = stickyEvents.remove(key);
-        if (info != null) {
-            return eventType.cast(info.event);
+        String key = obtainEventKey(eventType, tag);
+        Object event = stickyEvents.remove(key);
+        if (event != null) {
+            return eventType.cast(event);
         }
         return null;
     }
@@ -59,22 +52,14 @@ class EventStickyHelper {
 
     //运行sticky事件
     void runStickyEvent(final Object subscriber, final SubscriberMethodInfo info) {
-        String key = getEventKey(info.eventType, info.tag);
-        final StickyEventInfo stickyInfo = stickyEvents.get(key);
-        if (stickyInfo == null) {
+        String key = obtainEventKey(info.eventType, info.tag);
+        Object event = stickyEvents.get(key);
+        if (event == null) {
             return;
         }
 
-        Observable.just(stickyInfo.event)
+        Observable.just(event)
                 .compose(applySchedulers(info.mode))
-                .doFinally(new Action() {
-                    @Override
-                    public void run() throws Exception {
-                        if (stickyInfo.isSingle) {
-                            removeStickyEvent(info.eventType, info.tag);
-                        }
-                    }
-                })
                 .subscribe(new Consumer<Object>() {
                     @Override
                     public void accept(Object value) throws Exception {

@@ -80,27 +80,12 @@ public class RxBus {
         post(event, tag);
     }
 
-    public void postStickySingle(@NonNull Object event) {
-        postStickySingle(event, EventType.DEFAULT_TAG);
-    }
-
-    /**
-     * 发布只会被消费一次的sticky事件，数据类型和标志需要对应
-     *
-     * @param event 数据
-     * @param tag   标识
-     */
-    public void postStickySingle(@NonNull Object event, int tag) {
-        eventStickyHelper.postStickySingle(event, tag);
-        post(event, tag);
-    }
-
     public <T> T getStickyEvent(@NonNull Class<T> eventType) {
         return getStickyEvent(eventType, EventType.DEFAULT_TAG);
     }
 
     /**
-     * 根据类型和标识查找发布的sticky事件
+     * 根据类型和标识查找发布的sticky事件的值
      *
      * @param eventType 数据类型
      * @param tag       标识
@@ -113,8 +98,14 @@ public class RxBus {
         return removeStickyEvent(event, EventType.DEFAULT_TAG);
     }
 
+    /**
+     * 删除sticky事件，数据和标志需要对应
+     *
+     * @param event 数据
+     * @param tag   标识
+     */
     public <T> T removeStickyEvent(@NonNull T event, int tag) {
-        return (T) eventStickyHelper.removeStickyEvent(event.getClass(), tag);
+        return (T) removeStickyEvent(event.getClass(), tag);
     }
 
     public <T> T removeStickyEvent(@NonNull Class<T> eventType) {
