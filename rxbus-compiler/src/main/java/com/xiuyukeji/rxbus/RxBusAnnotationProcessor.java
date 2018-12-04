@@ -2,7 +2,6 @@ package com.xiuyukeji.rxbus;
 
 import com.google.auto.service.AutoService;
 import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
@@ -42,14 +41,19 @@ public class RxBusAnnotationProcessor extends AbstractProcessor {
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         String path = "com.xiuyukeji.rxbus";
+
+        String fileName = "SubscriberIndexImpl";
+
+        String suffix = processingEnv.getOptions().get("rxBusSuffix");
+        if (suffix != null) {
+            fileName = String.format("%s$%s", fileName, suffix);
+        }
+
         ClassName subscriberInfoType = ClassName.get(path, "SubscriberInfo");
         ClassName subscriberMethodInfoType = ClassName.get(path, "SubscriberMethodInfo");
         String variableName = "subscriberClass";
-        String infoName = "info";
-        String mapName = "subscriberIndex";
 
-        String readIndexName = "readIndex";
-        String putIndexName = "putIndex";
+        String readIndexName = "readInfo";
 
         ClassName threadModeName = ClassName.get(path, "ThreadMode");
         ClassName onCallListenerName = ClassName.get(OnCallListener.class);
@@ -59,38 +63,9 @@ public class RxBusAnnotationProcessor extends AbstractProcessor {
         ParameterizedTypeName classType = ParameterizedTypeName.get(ClassName.get(Class.class),
                 WildcardTypeName.subtypeOf(Object.class));
 
-        ParameterizedTypeName mapType = ParameterizedTypeName
-                .get(ClassName.get(HashMap.class), classType, subscriberInfoType);
-
-        FieldSpec mapField = FieldSpec.builder(mapType, mapName)
-                .addModifiers(Modifier.PRIVATE, Modifier.FINAL)
-                .initializer("new $T<>()", HashMap.class)
-                .build();
-
-        MethodSpec putIndexMethod = MethodSpec.methodBuilder(putIndexName)
-                .addModifiers(Modifier.PRIVATE)
-                .addParameter(subscriberInfoType, infoName)
-                .addStatement("$N.put($N.subscriberType,$N)", mapName, infoName, infoName)
-                .build();
-
-        MethodSpec getIndexMethod = MethodSpec.methodBuilder("getIndex")
-                .addAnnotation(Override.class)
-                .addModifiers(Modifier.PUBLIC)
-                .returns(subscriberInfoType)
-                .addParameter(classType, variableName)
-                .addStatement("$T $N = $N.get($N)", subscriberInfoType, infoName, mapName, variableName)
-                .beginControlFlow("if($N == null)", infoName)
-                .addStatement("$N = $N($N)", infoName, readIndexName, variableName)
-                .beginControlFlow("if($N != null)", infoName)
-                .addStatement("$N($N)", putIndexName, infoName)
-                .endControlFlow()
-                .endControlFlow()
-                .addStatement("return $N", infoName)
-                .build();
-
-        MethodSpec.Builder readIndexMethodBuilder = MethodSpec.methodBuilder(readIndexName)
+        MethodSpec.Builder readInfoMethodBuilder = MethodSpec.methodBuilder(readIndexName)
                 .addJavadoc("通过该方法懒加载数据")
-                .addModifiers(Modifier.PRIVATE)
+                .addModifiers(Modifier.PUBLIC)
                 .addParameter(classType, variableName)
                 .returns(subscriberInfoType);
 
@@ -182,22 +157,21 @@ public class RxBusAnnotationProcessor extends AbstractProcessor {
         int i = 0;
         for (ProcessorInfoIndex index : map.values()) {
             if (i == 0) {
-                readIndexMethodBuilder.beginControlFlow("if($N == $T.class)", variableName, index.classTypeName);
+                readInfoMethodBuilder.beginControlFlow("if($N == $T.class)", variableName, index.classTypeName);
             } else {
-                readIndexMethodBuilder.nextControlFlow("else if($N == $T.class)", variableName, index.classTypeName);
+                readInfoMethodBuilder.nextControlFlow("else if($N == $T.class)", variableName, index.classTypeName);
             }
 
-            readIndexMethodBuilder.addCode("return new $T($T.class, new $T[]{\n",
+            readInfoMethodBuilder.addCode("return new $T($T.class, new $T[]{\n",
                     subscriberInfoType,
                     index.classTypeName,
                     subscriberMethodInfoType);
 
-            index.processorInfos.sort(new TagComparator());
             int count = index.processorInfos.size();
-            readIndexMethodBuilder.addCode("$>");
+            readInfoMethodBuilder.addCode("$>");
             for (int j = 0; j < count; j++) {
                 ProcessorInfo info = index.processorInfos.get(j);
-                readIndexMethodBuilder.addCode("new $T($L, $L, $T.$L, $T.class, new $T() {\n",
+                readInfoMethodBuilder.addCode("new $T($S, $L, $T.$L, $T.class, new $T() {\n",
                         subscriberMethodInfoType,
                         info.tag,
                         info.sticky,
@@ -205,29 +179,27 @@ public class RxBusAnnotationProcessor extends AbstractProcessor {
                         info.mode,
                         info.parameterTypeName,
                         onCallListenerName);
-                readIndexMethodBuilder.addCode("$>@$T\n", overrideName);
-                readIndexMethodBuilder.addCode("public void onCall($T subscriber, $T value) {\n",
+                readInfoMethodBuilder.addCode("$>@$T\n", overrideName);
+                readInfoMethodBuilder.addCode("public void onCall($T subscriber, $T value) {\n",
                         objectName, objectName);
-                readIndexMethodBuilder.addStatement("$>(($T) subscriber).$L((($T) value))",
+                readInfoMethodBuilder.addStatement("$>(($T) subscriber).$L((($T) value))",
                         index.classTypeName, info.methodName, info.parameterTypeName);
-                readIndexMethodBuilder.addCode("$<}\n");
-                readIndexMethodBuilder.addCode("$<})$L\n", j == count - 1 ? "" : ",");
+                readInfoMethodBuilder.addCode("$<}\n");
+                readInfoMethodBuilder.addCode("$<})$L\n", j == count - 1 ? "" : ",");
             }
-            readIndexMethodBuilder.addStatement("$<})");
+            readInfoMethodBuilder.addStatement("$<})");
             i++;
         }
-        readIndexMethodBuilder.endControlFlow();
+        readInfoMethodBuilder.endControlFlow();
 
-        MethodSpec readIndexMethod = readIndexMethodBuilder.addStatement("return null").build();
+        MethodSpec readInfoMethod = readInfoMethodBuilder.addStatement("return null").build();
 
-        TypeSpec typeSpec = TypeSpec.classBuilder("SubscriberInfoIndexImpl")
-                .addJavadoc("rxBus 生成代码 请不要修改！")
+        TypeSpec typeSpec = TypeSpec.classBuilder(fileName)
+                .addJavadoc("rxBus 自动生成代码 请不要修改，")
+                .addJavadoc("如果出现类重复错误请设置[rxBusSuffix]！")
                 .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
-                .addSuperinterface(ClassName.get(path, "SubscriberInfoIndex"))
-                .addField(mapField)
-                .addMethod(getIndexMethod)
-                .addMethod(putIndexMethod)
-                .addMethod(readIndexMethod)
+                .addSuperinterface(ClassName.get(path, "SubscriberIndex"))
+                .addMethod(readInfoMethod)
                 .build();
 
         JavaFile javaFile = JavaFile.builder(path, typeSpec).build();

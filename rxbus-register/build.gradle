@@ -1,0 +1,14 @@
+apply plugin: 'groovy'
+
+dependencies {
+    implementation gradleApi()
+    implementation localGroovy()
+    implementation 'com.android.tools.build:gradle:3.2.1'
+}
+
+repositories {
+    jcenter()
+    google()
+}
+
+apply from: rootProject.file('gradle/gradle-mvn-push.gradle')

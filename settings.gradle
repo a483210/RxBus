@@ -1,2 +1,2 @@
-include ':app'
-include ':rxbus', ':rxbus-compiler', ':rxbus-annotations'
+include ':app', ':app.module'
+include ':rxbus', ':rxbus-annotations', ':rxbus-compiler' , ':rxbus-register'

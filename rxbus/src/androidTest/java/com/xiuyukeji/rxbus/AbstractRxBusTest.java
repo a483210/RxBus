@@ -4,7 +4,6 @@ import android.annotation.SuppressLint;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.support.test.runner.AndroidJUnit4;
 
 import org.junit.Before;
 import org.junit.runner.RunWith;
@@ -14,6 +13,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import androidx.test.runner.AndroidJUnit4;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -52,6 +53,7 @@ public abstract class AbstractRxBusTest {
     @Before
     public void setUpBase() throws Exception {
         eventBus = RxBus.get();
+        eventBus.addIndex(new SubscriberIndexImpl());
         eventBus.clearCaches();
         mainPoster = new EventPostHandler(Looper.getMainLooper());
         assertFalse(Looper.getMainLooper().getThread().equals(Thread.currentThread()));

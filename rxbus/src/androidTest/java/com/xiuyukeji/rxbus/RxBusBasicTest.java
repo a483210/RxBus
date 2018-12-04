@@ -2,16 +2,16 @@ package com.xiuyukeji.rxbus;
 
 import android.app.Activity;
 import android.os.SystemClock;
-import android.support.test.annotation.UiThreadTest;
-import android.support.test.espresso.core.deps.guava.eventbus.EventBus;
-import android.support.test.rule.UiThreadTestRule;
-import android.support.test.runner.AndroidJUnit4;
 import android.util.Log;
 
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import androidx.test.annotation.UiThreadTest;
+import androidx.test.rule.UiThreadTestRule;
+import androidx.test.runner.AndroidJUnit4;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -170,13 +170,6 @@ public class RxBusBasicTest {
     }
 
     @Test
-    public void testPostOnDifferentEventBus() {
-        eventBus.register(this);
-        new EventBus().post("Hello");
-        assertEquals(0, countStringEvent);
-    }
-
-    @Test
     public void testPostInEventHandler() {
         RepostInteger reposter = new RepostInteger();
         eventBus.register(reposter);
@@ -219,17 +212,17 @@ public class RxBusBasicTest {
 
     @Test
     public void testHasSubscriberForEventImplementedInterface() {
-        assertFalse(eventBus.hasSubscriberForTag(1));
+        assertFalse(eventBus.hasSubscriberForTag("1"));
 
         Object subscriber = new CharSequenceSubscriber();
         eventBus.register(subscriber);
-        assertTrue(eventBus.hasSubscriberForTag(1));
+        assertTrue(eventBus.hasSubscriberForTag("1"));
 
         eventBus.unregister(subscriber);
 
         waitRecycler();
 
-        assertFalse(eventBus.hasSubscriberForTag(1));
+        assertFalse(eventBus.hasSubscriberForTag("1"));
     }
 
     private void waitRecycler() {
@@ -273,7 +266,7 @@ public class RxBusBasicTest {
     }
 
     public static class CharSequenceSubscriber {
-        @Subscribe(tag = 1)
+        @Subscribe(tag = "1")
         public void onEvent(CharSequence event) {
         }
     }

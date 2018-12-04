@@ -1,6 +1,6 @@
 package com.xiuyukeji.rxbus.lifecycle;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.trello.rxlifecycle2.LifecycleTransformer;
 

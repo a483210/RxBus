@@ -15,7 +15,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.CLASS)
 public @interface Subscribe {
-    int tag() default EventType.DEFAULT_TAG;
+    String tag() default EventType.DEFAULT_TAG;
 
     ThreadMode mode() default ThreadMode.POST;
 

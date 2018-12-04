@@ -1,9 +1,10 @@
 package com.xiuyukeji.rxbus;
 
-import android.support.annotation.NonNull;
-
 import com.xiuyukeji.rxbus.lifecycle.IntRxLifecycleHelper;
+import com.xiuyukeji.rxbus.lifecycle.StringRxLifecycleHelper;
 
+import androidx.annotation.CheckResult;
+import androidx.annotation.NonNull;
 import io.reactivex.Observable;
 import io.reactivex.functions.Consumer;
 import io.reactivex.internal.functions.Functions;
@@ -33,18 +34,20 @@ public class RxBusExtra {
 
     private int sequence;
     private final IntRxLifecycleHelper lifecycleHelper;
-    private final IntRxLifecycleHelper tagLifecycleHelper;
+    private final StringRxLifecycleHelper tagLifecycleHelper;
 
     private RxBusExtra() {
         this.lifecycleHelper = new IntRxLifecycleHelper();
-        this.tagLifecycleHelper = new IntRxLifecycleHelper();
+        this.tagLifecycleHelper = new StringRxLifecycleHelper();
     }
 
+    @CheckResult
     public <T> Observable<T> take(@NonNull Class<T> eventType) {
         return take(eventType, EventType.DEFAULT_TAG);
     }
 
-    public <T> Observable<T> take(@NonNull Class<T> eventType, int tag) {
+    @CheckResult
+    public <T> Observable<T> take(@NonNull Class<T> eventType, String tag) {
         return take(eventType, tag, ThreadMode.POST);
     }
 
@@ -56,19 +59,20 @@ public class RxBusExtra {
      * @param mode      线程模式
      * @return observable
      */
-    public <T> Observable<T> take(@NonNull Class<T> eventType, int tag, @NonNull ThreadMode mode) {
+    @CheckResult
+    public <T> Observable<T> take(@NonNull Class<T> eventType, String tag, @NonNull ThreadMode mode) {
         return obtainSubject(tag)
                 .compose(applySchedulers(mode))
                 .ofType(eventType);
     }
 
-
+    @CheckResult
     public <T> Observable<T> single(@NonNull Class<T> eventType) {
         return single(eventType, EventType.DEFAULT_TAG);
     }
 
-
-    public <T> Observable<T> single(@NonNull Class<T> eventType, int tag) {
+    @CheckResult
+    public <T> Observable<T> single(@NonNull Class<T> eventType, String tag) {
         return single(eventType, tag, ThreadMode.POST);
     }
 
@@ -79,7 +83,8 @@ public class RxBusExtra {
      * @param tag       标识
      * @param mode      线程模式
      */
-    public <T> Observable<T> single(final @NonNull Class<T> eventType, int tag, @NonNull ThreadMode mode) {
+    @CheckResult
+    public <T> Observable<T> single(@NonNull Class<T> eventType, String tag, @NonNull ThreadMode mode) {
         final int sequence = getSequence();
         return obtainSubject(tag)
                 .compose(applySchedulers(mode))
@@ -99,11 +104,11 @@ public class RxBusExtra {
      *
      * @param tag 标识
      */
-    public void unsubscriber(int tag) {
+    public void unsubscriber(String tag) {
         tagLifecycleHelper.unbindEvent(tag);
     }
 
-    private Observable<Object> obtainSubject(int tag) {
+    private Observable<Object> obtainSubject(String tag) {
         return RxBus.get()
                 .eventHelper
                 .obtainSubject(tag)

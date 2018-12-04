@@ -1,9 +1,11 @@
 package com.xiuyukeji.rxbus;
 
-import android.support.annotation.NonNull;
+import android.content.Context;
 
 import com.xiuyukeji.rxbus.utils.CacheList;
-import com.xiuyukeji.rxbus.utils.SubscriberUtils;
+
+import androidx.annotation.CheckResult;
+import androidx.annotation.NonNull;
 
 import static com.xiuyukeji.rxbus.utils.SubscriberUtils.isSystemClass;
 
@@ -14,7 +16,6 @@ import static com.xiuyukeji.rxbus.utils.SubscriberUtils.isSystemClass;
  *
  * @author Created by jz on 2016/12/6 17:05
  */
-
 public class RxBus {
 
     private static volatile RxBus instance;
@@ -33,7 +34,7 @@ public class RxBus {
     public static final String TAG = "rxBus";
 
     //存储订阅信息，通过APT自动生成，提高注册速度
-    private final SubscriberInfoIndex subscriberInfoIndex;
+    private final SubscriberLoader subscriberLoader;
     //搜索SubscriberInfo时的缓存
     private final CacheList<SubscriberInfo> cacheList;
 
@@ -41,13 +42,36 @@ public class RxBus {
     final EventStickyHelper eventStickyHelper;
 
     private RxBus() {
-        //SubscriberInfoIndexImpl名字固定，请不要修改
-        this.subscriberInfoIndex = (SubscriberInfoIndex) SubscriberUtils.newInstance("com.xiuyukeji.rxbus.SubscriberInfoIndexImpl");
-
         this.eventHelper = new EventHelper();
         this.eventStickyHelper = new EventStickyHelper();
 
         this.cacheList = new CacheList<>(new SubscriberInfo[30]);
+
+        this.subscriberLoader = new SubscriberLoader();
+    }
+
+    /**
+     * 默认通过反射扫描工程然后添加订阅序列，反射在加固后将无效
+     * 或者使用rxbus-register自动注册，可以提高注册速度
+     *
+     * @param context 上下文
+     */
+    public void registerIndex(Context context) {
+        synchronized (this) {
+            subscriberLoader.autoRegisterIndex();//如果启用rxbus-register
+            subscriberLoader.registerIndex(context);
+        }
+    }
+
+    /**
+     * 添加订阅序列
+     *
+     * @param index 序列
+     */
+    public void addIndex(SubscriberIndex index) {
+        synchronized (this) {
+            subscriberLoader.addIndex(index);
+        }
     }
 
     public void post(@NonNull Object event) {
@@ -60,7 +84,7 @@ public class RxBus {
      * @param event 数据
      * @param tag   标识
      */
-    public void post(@NonNull Object event, int tag) {
+    public void post(@NonNull Object event, String tag) {
         eventHelper.post(event, tag);
     }
 
@@ -75,11 +99,12 @@ public class RxBus {
      * @param event 数据
      * @param tag   标识
      */
-    public void postSticky(@NonNull Object event, int tag) {
+    public void postSticky(@NonNull Object event, String tag) {
         eventStickyHelper.postSticky(event, tag);
         post(event, tag);
     }
 
+    @CheckResult
     public <T> T getStickyEvent(@NonNull Class<T> eventType) {
         return getStickyEvent(eventType, EventType.DEFAULT_TAG);
     }
@@ -90,7 +115,8 @@ public class RxBus {
      * @param eventType 数据类型
      * @param tag       标识
      */
-    public <T> T getStickyEvent(@NonNull Class<T> eventType, int tag) {
+    @CheckResult
+    public <T> T getStickyEvent(@NonNull Class<T> eventType, String tag) {
         return eventStickyHelper.getStickyEvent(eventType, tag);
     }
 
@@ -104,7 +130,7 @@ public class RxBus {
      * @param event 数据
      * @param tag   标识
      */
-    public <T> T removeStickyEvent(@NonNull T event, int tag) {
+    public <T> T removeStickyEvent(@NonNull T event, String tag) {
         return (T) removeStickyEvent(event.getClass(), tag);
     }
 
@@ -118,7 +144,7 @@ public class RxBus {
      * @param eventType 数据类型
      * @param tag       标识
      */
-    public <T> T removeStickyEvent(@NonNull Class<T> eventType, int tag) {
+    public <T> T removeStickyEvent(@NonNull Class<T> eventType, String tag) {
         return eventStickyHelper.removeStickyEvent(eventType, tag);
     }
 
@@ -135,9 +161,6 @@ public class RxBus {
      * @param subscriber 订阅者
      */
     public void register(@NonNull final Object subscriber) {
-        if (subscriberInfoIndex == null) {
-            return;
-        }
         if (isRegistered(subscriber)) {
             return;
         }
@@ -169,9 +192,9 @@ public class RxBus {
         cacheList.clear();
         Class<?> clazz = subscriber.getClass();
         while (clazz != null && !isSystemClass(clazz.getName())) {
-            SubscriberInfo info = subscriberInfoIndex.getIndex(clazz);
+            SubscriberInfo info = subscriberLoader.getInfo(clazz);
             if (info != null) {
-                cacheList.add(subscriberInfoIndex.getIndex(clazz));
+                cacheList.add(info);
             }
             clazz = clazz.getSuperclass();
         }
@@ -184,9 +207,6 @@ public class RxBus {
      * @param subscriber 订阅者
      */
     public void unregister(@NonNull Object subscriber) {
-        if (subscriberInfoIndex == null) {
-            return;
-        }
         if (!isRegistered(subscriber)) {
             return;
         }
@@ -201,6 +221,7 @@ public class RxBus {
      *
      * @param subscriber 订阅者
      */
+    @CheckResult
     public boolean isRegistered(@NonNull Object subscriber) {
         synchronized (this) {
             return eventHelper.isRegistered(subscriber);
@@ -212,7 +233,8 @@ public class RxBus {
      *
      * @param tag 标识
      */
-    public boolean hasSubscriberForTag(int tag) {
+    @CheckResult
+    public boolean hasSubscriberForTag(String tag) {
         return eventHelper.hasSubscriberForTag(tag);
     }
 

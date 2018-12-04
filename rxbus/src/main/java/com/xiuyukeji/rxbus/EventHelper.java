@@ -21,7 +21,7 @@ import static com.xiuyukeji.rxbus.utils.SubscriberUtils.applySchedulers;
 class EventHelper {
     //根据tag存储Subject，在post时会查找符合的subject发布事件
     //从这个角度上来讲，同一个subject订阅越多则发布事件越慢，反之如果tag越多则订阅事件速度越慢
-    private final ConcurrentHashMap<Integer, Subject<Object>> bus;
+    private final ConcurrentHashMap<String, Subject<Object>> bus;
     //管理subject取消订阅
     private final EventRxLifecycleHelper lifecycleHelper;
     private final RecycleHelper recycleHelper;
@@ -33,9 +33,9 @@ class EventHelper {
     }
 
     //发布普通事件
-    void post(Object event, int tag) {
+    void post(Object event, String tag) {
         Subject<Object> subject = bus.get(tag);
-        if (subject != null) {
+        if (subject != null && !subject.hasThrowable()) {
             subject.onNext(event);
         }
     }
@@ -46,7 +46,7 @@ class EventHelper {
     }
 
     //是否有订阅该标识的事件
-    boolean hasSubscriberForTag(int tag) {
+    boolean hasSubscriberForTag(String tag) {
         Subject<Object> subject = bus.get(tag);
         return subject != null && subject.hasObservers();
     }
@@ -60,12 +60,16 @@ class EventHelper {
                 .subscribe(new Consumer<Object>() {
                     @Override
                     public void accept(Object value) throws Exception {
-                        info.listener.onCall(subscriber, value);
+                        try {
+                            info.listener.onCall(subscriber, value);
+                        } catch (Throwable throwable) {
+                            throwable.printStackTrace();
+                        }
                     }
                 }, new Consumer<Throwable>() {
                     @Override
                     public void accept(Throwable throwable) throws Exception {
-                        throwable.printStackTrace();
+                        throw new IllegalStateException("unknown state");
                     }
                 });
     }
@@ -76,7 +80,7 @@ class EventHelper {
     }
 
     //通过tag创建不同的subject，以提高post时的速度，subject被订阅的事件越多速度越慢
-    Observable<Object> obtainSubject(final int tag) {
+    Observable<Object> obtainSubject(final String tag) {
         Subject<Object> subject = bus.get(tag);
         if (subject == null) {
             subject = PublishSubject.create().toSerialized();

@@ -6,5 +6,5 @@ package com.xiuyukeji.rxbus;
  * @author Created by jz on 2016/12/7 10:17
  */
 public class EventType {
-    public static final int DEFAULT_TAG = -1;
+    public static final String DEFAULT_TAG = "default";
 }

@@ -5,6 +5,6 @@ package com.xiuyukeji.rxbus;
  *
  * @author Created by jz on 2016/12/7 13:36
  */
-interface SubscriberInfoIndex {
-    SubscriberInfo getIndex(Class<?> subscriberType);
+interface SubscriberIndex {
+    SubscriberInfo readInfo(Class<?> subscriberType);
 }

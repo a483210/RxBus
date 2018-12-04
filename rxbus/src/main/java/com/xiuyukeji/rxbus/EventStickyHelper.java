@@ -21,12 +21,12 @@ class EventStickyHelper {
     }
 
     //发布sticky事件
-    void postSticky(Object event, int tag) {
+    void postSticky(Object event, String tag) {
         String key = obtainEventKey(event.getClass(), tag);
         stickyEvents.put(key, event);
     }
 
-    <T> T getStickyEvent(Class<T> eventType, int tag) {
+    <T> T getStickyEvent(Class<T> eventType, String tag) {
         String key = obtainEventKey(eventType, tag);
         Object event = stickyEvents.get(key);
         if (event != null) {
@@ -36,7 +36,7 @@ class EventStickyHelper {
     }
 
     //删除sticky事件
-    <T> T removeStickyEvent(Class<T> eventType, int tag) {
+    <T> T removeStickyEvent(Class<T> eventType, String tag) {
         String key = obtainEventKey(eventType, tag);
         Object event = stickyEvents.remove(key);
         if (event != null) {

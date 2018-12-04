@@ -6,13 +6,13 @@ package com.xiuyukeji.rxbus;
  * @author Created by jz on 2016/12/7 14:19
  */
 class SubscriberMethodInfo {
-    final int tag;
+    final String tag;
     final boolean sticky;
     final ThreadMode mode;
     final Class<?> eventType;
     final OnCallListener listener;
 
-    SubscriberMethodInfo(int tag, boolean sticky, ThreadMode mode, Class<?> eventType, OnCallListener listener) {
+    SubscriberMethodInfo(String tag, boolean sticky, ThreadMode mode, Class<?> eventType, OnCallListener listener) {
         this.tag = tag;
         this.sticky = sticky;
         this.mode = mode;
